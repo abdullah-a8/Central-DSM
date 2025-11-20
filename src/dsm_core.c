@@ -316,51 +316,26 @@ void lock_page(dsm_page_t *page, int rights)
 	}
 
 	if (!page->uptodate) {
-		/* Master handles page requests differently to avoid deadlock */
-		if (dsm_g->is_master) {
-			/* Check if master is the write owner */
-			if (page->write_owner == dsm_g->master->sockfd) {
-				/* Master owns the page - restore memory protection and mark as uptodate */
-				void *page_base_addr = dsm_g->mem->base_addr + (page->page_id * dsm_g->mem->pagesize);
-				int prot = (rights & PROT_WRITE) ? (PROT_READ | PROT_WRITE) : PROT_READ;
 
-				if (mprotect(page_base_addr, dsm_g->mem->pagesize, prot) < 0) {
-					error("error mprotect in lock_page\n");
-				}
+		dsm_message_t msg_lockpage;
+		msg_lockpage.type = LOCKPAGE;
 
-				page->uptodate = 1;
-				page->protection = prot;
-			} else {
-				/* Someone else has the page - wait for them to return it */
-				debug("Master waiting for page %lu from owner %d\n", page->page_id, page->write_owner);
-				while (!page->uptodate) {
-					if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
-						error("error pthread_cond_wait mutex_page\n");
-					}
-				}
-			}
-		} else {
-			/* Slaves send LOCKPAGE to master and wait for response */
-			dsm_message_t msg_lockpage;
-			msg_lockpage.type = LOCKPAGE;
+		msg_lockpage_args_t la = {
+			.page_id = page->page_id,
+			.access_rights = rights
+		};
 
-			msg_lockpage_args_t la = {
-				.page_id = page->page_id,
-				.access_rights = rights
-			};
+		msg_lockpage.lockpage_args = la;
 
-			msg_lockpage.lockpage_args = la;
+		if (dsm_send_msg(dsm_g->master->sockfd, &msg_lockpage) < 0) {
+			error("Send LOCKPAGE\n");
+		}
 
-			if (dsm_send_msg(dsm_g->master->sockfd, &msg_lockpage) < 0) {
-				error("Send LOCKPAGE\n");
-			}
+		debug("Sent LOCKPAGE to master for page %lu\n", page->page_id);
 
-			debug("Sent LOCKPAGE to master for page %lu\n", page->page_id);
-
-			while (!page->uptodate) {
-				if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
-					error("error pthread_cond_wait mutex_page\n");
-				}
+		while (!page->uptodate) {
+			if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
+				error("error pthread_cond_wait mutex_page\n");
 			}
 		}
 	}

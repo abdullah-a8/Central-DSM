@@ -321,15 +321,11 @@ void unlock_write(void *addr)
 	dsm_page_t *page;
 	page = get_page_from_addr(addr);
 
-	/* Only slaves need to send the page back to master */
-	if (!dsm_g->is_master) {
-		dsm_page_request_t req;
-		req.rights = page->protection;
-		req.sockfd = dsm_g->master->sockfd;
-		satisfy_request(page, &req);
-	}
+	dsm_page_request_t req;
+	req.rights = page->protection;
+	req.sockfd = dsm_g->master->sockfd;
 
-	/* Give up ownership - this marks page as not uptodate */
+	satisfy_request(page, &req);
 	giveup_localpage(page, dsm_g->master->sockfd);
 
 	if (pthread_mutex_unlock(&page->mutex_page) < 0) {
