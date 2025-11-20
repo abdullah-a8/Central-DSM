@@ -375,9 +375,7 @@ int satisfy_request(dsm_page_t *page, dsm_page_request_t *req)
 	givepage_msg.givepage_args = ca;
 
 	debug("Sending page %lu to %d current rights: %d\n", page->page_id, req->sockfd, page->protection);
-	debug("About to call dsm_send_msg, page_base_addr=%p, pagesize=%ld\n", page_base_addr, dsm_g->mem->pagesize);
 	send_result = dsm_send_msg(req->sockfd, &givepage_msg);
-	debug("dsm_send_msg completed with result %d\n", send_result);
 
 	/* Restore original protection */
 	if (original_prot == PROT_NONE) {
