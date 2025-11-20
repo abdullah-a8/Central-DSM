@@ -47,12 +47,16 @@ int dsm_master_init(dsm_master_t *master, char *host_master, int port_master, un
 
 	master->port = port_master;
 
+	/* Initialize socket descriptors to -1 (invalid) */
+	master->sockfd = -1;
+	master->server_sockfd = -1;
+
 	if (is_master) {
 		master->server_sockfd = dsm_socket_bind_listen(master->port, MAX_WAITING_NODES);
 	} else {
 		master->sockfd = dsm_socket_connect(master->host, master->port);
 	}
-	
+
 	return master->sockfd;
 }
 
@@ -64,6 +68,18 @@ int dsm_master_init(dsm_master_t *master, char *host_master, int port_master, un
 
 void dsm_master_destroy(dsm_master_t *master)
 {
-	dsm_socket_shutdown(master->sockfd, SHUT_RD);
+	/* Close client socket if valid */
+	if (master->sockfd >= 0) {
+		dsm_socket_shutdown(master->sockfd, SHUT_RDWR);
+		dsm_socket_close(master->sockfd);
+		master->sockfd = -1;
+	}
+
+	/* Close server socket if valid (master nodes only) */
+	if (master->server_sockfd >= 0) {
+		dsm_socket_close(master->server_sockfd);
+		master->server_sockfd = -1;
+	}
+
 	free(master->host);
 }

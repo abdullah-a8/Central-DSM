@@ -178,6 +178,7 @@ int dsm_send_msg(int nodefd, dsm_message_t *msg)
 			break;
 		case SYNC_BARRIER:
 			binn_object_set_int16(obj, DSM_MSG_KEY_BARRIER, msg->sync_barrier_args.slave_to_wait);
+			break;
 		case BARRIER_ACK:
 			break;
 		case TERMINATE:

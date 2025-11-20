@@ -20,10 +20,11 @@ void list_destroy(list_t *l) {
 		l->head = current->next;
 		if(l->freeFn) {
 			l->freeFn(current->data);
+		} else {
+			free(current->data);
 		}
 
 		l->length--;
-		free(current->data);
 		free(current);
 	}
 	l->tail = NULL;
@@ -59,11 +60,12 @@ void list_remove(list_t *l, void *element) {
 		nextNode = currNode->next;
 
 		if(l->equalsFn(currNode->data, element)) {
-			
+
 			if(l->freeFn) {
       			l->freeFn(currNode->data);
+    		} else {
+    			free(currNode->data);
     		}
-    		free(currNode->data);
     		free(currNode);
 
     		if(prevNode) {
