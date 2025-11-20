@@ -53,11 +53,11 @@ int dsm_master_init(dsm_master_t *master, char *host_master, int port_master, un
 
 	if (is_master) {
 		master->server_sockfd = dsm_socket_bind_listen(master->port, MAX_WAITING_NODES);
+		return master->server_sockfd;
 	} else {
 		master->sockfd = dsm_socket_connect(master->host, master->port);
+		return master->sockfd;
 	}
-
-	return master->sockfd;
 }
 
 /**
