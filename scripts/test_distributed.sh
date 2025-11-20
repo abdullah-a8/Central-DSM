@@ -137,7 +137,7 @@ EOF
     
     echo "Compiling custom slave with master IP: $master_ip"
     gcc -o /tmp/temp_slave_reader /tmp/temp_slave_reader.c \
-        -std=c99 -Isrc -Lbuild/lib -lcentraldsm -lpthread
+        -std=c99 -Isrc build/lib/libcentraldsm.a -lpthread
     
     echo "Running slave..."
     echo ""
@@ -206,7 +206,7 @@ EOF
     
     echo "Compiling custom slave with master IP: $master_ip"
     gcc -o /tmp/temp_slave_writer /tmp/temp_slave_writer.c \
-        -std=c99 -Isrc -Lbuild/lib -lcentraldsm -lpthread
+        -std=c99 -Isrc build/lib/libcentraldsm.a -lpthread
     
     echo "Running slave..."
     echo ""
