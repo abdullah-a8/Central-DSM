@@ -351,17 +351,40 @@ void lock_page(dsm_page_t *page, int rights)
 int satisfy_request(dsm_page_t *page, dsm_page_request_t *req)
 {
 	dsm_message_t givepage_msg;
+	void *page_base_addr;
+	int original_prot;
+	int send_result;
+
 	givepage_msg.type = GIVEPAGE;
+
+	page_base_addr = dsm_g->mem->base_addr + (page->page_id * dsm_g->mem->pagesize);
+
+	/* Save original protection and temporarily make page readable for serialization */
+	original_prot = page->protection;
+	if (original_prot == PROT_NONE) {
+		if (mprotect(page_base_addr, dsm_g->mem->pagesize, PROT_READ) < 0) {
+			error("mprotect PROT_READ for send\n");
+		}
+	}
 
 	msg_givepage_args_t ca = {
 		.page_id = page->page_id,
 		.access_rights = req->rights,
-		.data = dsm_g->mem->base_addr + (page->page_id * dsm_g->mem->pagesize)
+		.data = page_base_addr
 	};
 	givepage_msg.givepage_args = ca;
 
 	debug("Sending page %lu to %d current rights: %d\n", page->page_id, req->sockfd, page->protection);
-	return dsm_send_msg(req->sockfd, &givepage_msg);
+	send_result = dsm_send_msg(req->sockfd, &givepage_msg);
+
+	/* Restore original protection */
+	if (original_prot == PROT_NONE) {
+		if (mprotect(page_base_addr, dsm_g->mem->pagesize, PROT_NONE) < 0) {
+			error("mprotect restore PROT_NONE\n");
+		}
+	}
+
+	return send_result;
 }
 
 /**
