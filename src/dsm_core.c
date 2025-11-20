@@ -461,14 +461,9 @@ static void process_list_requests(dsm_page_t *page)
 	//If their's a write_owner, we must wait for the write_unlock
 	if (!page->uptodate) {
 		/* Special case: if we're the master and the master owns the page,
-		 * mark it as uptodate so we can process requests with our local copy */
+		 * mark it as uptodate so we can process requests with our local copy.
+		 * Memory is already accessible (master doesn't give up mprotect on unlock_write) */
 		if (dsm_g->is_master && page->write_owner == dsm_g->master->sockfd) {
-			void* page_base_addr = dsm_g->mem->base_addr + (page->page_id * dsm_g->mem->pagesize);
-			/* Restore read/write access to our own data */
-			if (mprotect(page_base_addr, dsm_g->mem->pagesize, PROT_READ | PROT_WRITE) < 0) {
-				error("error mprotect\n");
-			}
-			page->protection = PROT_READ | PROT_WRITE;
 			page->uptodate = 1;
 		} else {
 			return;
