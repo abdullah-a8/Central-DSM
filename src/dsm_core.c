@@ -316,15 +316,25 @@ void lock_page(dsm_page_t *page, int rights)
 	}
 
 	if (!page->uptodate) {
-		/* Master processes its own requests directly to avoid deadlock */
+		/* Master handles page requests differently to avoid deadlock */
 		if (dsm_g->is_master) {
-			/* Process any pending requests for this page */
-			process_list_requests(page);
-
-			/* If page is still not uptodate, mark it as uptodate since master has the data */
-			if (!page->uptodate) {
+			/* Check if master is the write owner */
+			if (page->write_owner == dsm_g->master->sockfd) {
+				/* Master owns the page - just mark as uptodate */
 				page->uptodate = 1;
-				page->protection = rights;
+				if (rights & PROT_WRITE) {
+					page->protection = PROT_READ | PROT_WRITE;
+				} else {
+					page->protection = PROT_READ;
+				}
+			} else {
+				/* Someone else has the page - wait for them to return it */
+				debug("Master waiting for page %lu from owner %d\n", page->page_id, page->write_owner);
+				while (!page->uptodate) {
+					if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
+						error("error pthread_cond_wait mutex_page\n");
+					}
+				}
 			}
 		} else {
 			/* Slaves send LOCKPAGE to master and wait for response */
