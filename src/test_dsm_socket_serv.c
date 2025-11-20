@@ -12,7 +12,7 @@ int main(void)
 	int socket_server, socket_client;
 	socklen_t fromlen = sizeof exp;
 
-	socket_server = dsm_socket_bind_listen(5555, 256);
+	socket_server = dsm_socket_bind_listen(5000, 256);
 
 	while (1)
 	{

@@ -4,7 +4,7 @@
 
 int main()
 {
-	void *base_addr = InitMaster(5555, 10);
+	void *base_addr = InitMaster(5000, 10);
 	printf("base_addr: %lx\n", (long) base_addr);
 	sync_barrier(3);
 	

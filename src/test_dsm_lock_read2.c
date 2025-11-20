@@ -4,7 +4,7 @@
 
 int main()
 {
-	void *base_addr = InitSlave("132.227.112.195", 5555);
+	void *base_addr = InitSlave("132.227.112.195", 5000);
 	
 	printf("base_addr: %lx\n", (long) base_addr);
 	sync_barrier(3);

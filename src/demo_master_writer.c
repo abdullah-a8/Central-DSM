@@ -8,7 +8,7 @@ int main()
 	int nb_proc = 3;
 	int *entier_ptr;
 
-	void *base_addr = InitMaster(5555, 10);
+	void *base_addr = InitMaster(5000, 10);
 	printf("base_addr: %lx\n", (long) base_addr);
 	entier_ptr = (int *) base_addr;
 	
