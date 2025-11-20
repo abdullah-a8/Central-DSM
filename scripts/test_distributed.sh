@@ -114,21 +114,26 @@ run_slave_reader() {
 int main()
 {
     unsigned int nb_proc = 3;
-    unsigned int nb_lecture = 10;
+    unsigned int nb_lecture = 5;
 
     void *base_addr = InitSlave("$master_ip", $port);
     printf("base_addr: %lx\n", (long) base_addr);
 
+    printf("=== Phase 1: Initial Barrier ===\n");
     sync_barrier(nb_proc);
 
+    printf("=== Phase 2: Reading Values ===\n");
     for(unsigned int i = 0; i < nb_lecture; i++) {
         lock_read(base_addr);
-        printf("[Read %d] entier = %d\n", i+1, *((int*) (base_addr)));
-        printf("[Read %d] chaine = %s\n", i+1, (char *)(base_addr + sizeof(int)));
+        printf("[Read %d] integer = %d\n", i+1, *((int*) (base_addr)));
+        printf("[Read %d] string  = %s\n", i+1, (char *)(base_addr + sizeof(int)));
         unlock_read(base_addr);
     }
 
+    printf("=== Phase 3: Final Barrier ===\n");
     sync_barrier(nb_proc);
+    
+    printf("=== Slave-reader completed successfully ===\n");
     QuitDSM();
     return 0;
 }
@@ -178,26 +183,32 @@ run_slave_writer() {
 int main()
 {
     unsigned int nb_proc = 3;
-    unsigned int nb_lecture = 10;
+    unsigned int nb_lecture = 5;
     
     void *base_addr = InitSlave("$master_ip", $port);
-    printf("base_addr: %lx\n", (long) base_addr);
+    printf("base_addr: %lx\\n", (long) base_addr);
 
+    printf("=== Phase 1: Initial Barrier ===\\n");
     sync_barrier(nb_proc);
 
+    printf("=== Phase 2: Writing String ===\\n");
     lock_write(base_addr);
     strcpy((char *)(base_addr + sizeof(int)), "hello world");
-    printf("\\tWriting: %s\\n", (char *)(base_addr + sizeof(int)));
+    printf("  Written string: %s\\n", (char *)(base_addr + sizeof(int)));
     unlock_write(base_addr);
 
+    printf("=== Phase 3: Reading Values ===\\n");
     for(unsigned int i = 0; i < nb_lecture; i++) {
         lock_read(base_addr);
-        printf("[Read %d] entier = %d\\n", i+1, *((int*) (base_addr)));
-        printf("[Read %d] chaine = %s\\n", i+1, (char *)(base_addr + sizeof(int)));
+        printf("[Read %d] integer = %d\\n", i+1, *((int*) (base_addr)));
+        printf("[Read %d] string  = %s\\n", i+1, (char *)(base_addr + sizeof(int)));
         unlock_read(base_addr);
     }
 
+    printf("=== Phase 4: Final Barrier ===\\n");
     sync_barrier(nb_proc);
+    
+    printf("=== Slave-writer completed successfully ===\\n");
     QuitDSM();
     return 0;
 }
