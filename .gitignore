@@ -1,0 +1,51 @@
+# Build directories
+build/
+obj/
+lib/
+tests/
+
+# Compiled object files
+*.o
+*.so
+*.a
+
+# Executables
+demo_master_writer
+demo_slave_reader
+demo_slave_writer_reader
+test_dsm_init_master
+test_dsm_init_slave
+test_dsm_lock_write
+test_dsm_lock_read
+test_dsm_lock_read2
+
+# Debug and sanitizer output
+*.log
+vgcore.*
+core
+core.*
+
+# Valgrind output
+valgrind-*.log
+*.valgrind
+
+# TSan output
+tsan-*.log
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation build artifacts
+doxy/
+*.pdf
+
+# Temporary files
+*.tmp
+*.bak
+
+LocalDocs
