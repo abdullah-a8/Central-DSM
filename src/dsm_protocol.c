@@ -174,7 +174,9 @@ int dsm_send_msg(int nodefd, dsm_message_t *msg)
 		case GIVEPAGE:
 			binn_object_set_int32(obj, DSM_MSG_KEY_PAGEID, msg->givepage_args.page_id);
 			binn_object_set_int16(obj, DSM_MSG_KEY_RIGHTS, msg->givepage_args.access_rights);
+			debug("About to set blob: data=%p, size=%ld\n", msg->givepage_args.data, dsm_g->mem->pagesize);
 			binn_object_set_blob(obj, DSM_MSG_KEY_DATA, msg->givepage_args.data, dsm_g->mem->pagesize);
+			debug("Blob set successfully\n");
 			break;
 		case SYNC_BARRIER:
 			binn_object_set_int16(obj, DSM_MSG_KEY_BARRIER, msg->sync_barrier_args.slave_to_wait);

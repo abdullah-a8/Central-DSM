@@ -375,7 +375,9 @@ int satisfy_request(dsm_page_t *page, dsm_page_request_t *req)
 	givepage_msg.givepage_args = ca;
 
 	debug("Sending page %lu to %d current rights: %d\n", page->page_id, req->sockfd, page->protection);
+	debug("About to call dsm_send_msg, page_base_addr=%p, pagesize=%ld\n", page_base_addr, dsm_g->mem->pagesize);
 	send_result = dsm_send_msg(req->sockfd, &givepage_msg);
+	debug("dsm_send_msg completed with result %d\n", send_result);
 
 	/* Restore original protection */
 	if (original_prot == PROT_NONE) {
@@ -487,6 +489,7 @@ static void process_list_requests(dsm_page_t *page)
 
 	while (reqlist != NULL)
 	{
+		listNode_t *next_node = reqlist->next;  /* Save next before removal */
 		req = (dsm_page_request_t *) reqlist->data;
 		//Case it's a reader, juste have to check the page isn't lock in write.
 		//if not, just send the page, update both queues and process new head element
@@ -496,8 +499,8 @@ static void process_list_requests(dsm_page_t *page)
 				log("error satisfy_request\n");
 			}
 			list_add(page->current_readers_queue, &req->sockfd);
-			list_remove(page->requests_queue, req);
-			reqlist = reqlist->next;
+			list_remove(page->requests_queue, req);  /* This frees reqlist */
+			reqlist = next_node;  /* Use saved pointer */
 			continue;
 		}
 		//Case it's a writer, if there is some readers we must ask them to invalidate
@@ -509,6 +512,7 @@ static void process_list_requests(dsm_page_t *page)
 			{
 				invalidate_readers(page);
 				page->invalidate_sent = 1;
+				return;  /* Wait for invalidation ACKs, stop processing */
 			}
 			else if (page->current_readers_queue->length == 0)
 			{
@@ -517,7 +521,12 @@ static void process_list_requests(dsm_page_t *page)
 					log("error satisfy_request\n");
 				}
 				giveup_localpage(page, req->sockfd);
-				list_remove(page->requests_queue, req);
+				list_remove(page->requests_queue, req);  /* This frees reqlist */
+				return;
+			}
+			else
+			{
+				/* Waiting for invalidation ACKs */
 				return;
 			}
 		}
@@ -526,6 +535,9 @@ static void process_list_requests(dsm_page_t *page)
 			error("Bad Rights");
 			return;
 		}
+
+		/* Advance to next node (for cases that don't return/continue) */
+		reqlist = next_node;
 	}
 }
 
