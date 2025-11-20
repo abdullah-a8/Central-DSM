@@ -69,8 +69,17 @@ int handle_lockpage_msg(int from, msg_lockpage_args_t *args)
 
 	page = get_page_from_id(args->page_id);
 
+	/* Protect list operations with page mutex to prevent race conditions */
+	if (pthread_mutex_lock(&page->mutex_page) < 0) {
+		error("lock mutex_page");
+	}
+
 	list_add(page->requests_queue, &new_req);
 	process_list_requests(page);
+
+	if (pthread_mutex_unlock(&page->mutex_page) < 0) {
+		error("unlock mutex_page");
+	}
 
 	return 0;
 }
@@ -132,8 +141,17 @@ int handle_invalidate_ack_msg(int from, msg_invalidate_ack_args_t *args)
 	page = get_page_from_id(args->page_id);
 	log("Received INVALIDATE_ACK for page %lu from %d\n", args->page_id, from);
 
+	/* Protect list operations with page mutex to prevent race conditions */
+	if (pthread_mutex_lock(&page->mutex_page) < 0) {
+		error("lock mutex_page");
+	}
+
 	list_remove(page->current_readers_queue, &from);
 	process_list_requests(page);
+
+	if (pthread_mutex_unlock(&page->mutex_page) < 0) {
+		error("unlock mutex_page");
+	}
 
 	return 0;
 }
@@ -181,7 +199,14 @@ int handle_givepage_msg(int from, msg_givepage_args_t *args)
 	}
 
 	if (dsm_g->is_master) {
+		/* Re-acquire mutex for list operations on master */
+		if (pthread_mutex_lock(&page->mutex_page) < 0) {
+			error("lock mutex_page");
+		}
 		process_list_requests(page);
+		if (pthread_mutex_unlock(&page->mutex_page) < 0) {
+			error("unlock mutex_page");
+		}
 	}
 
 	return 0;

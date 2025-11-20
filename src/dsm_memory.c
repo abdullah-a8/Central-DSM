@@ -63,14 +63,14 @@ void dsm_memory_init(dsm_memory_t *dsm_mem, size_t pagesize, size_t page_count,
 		dsm_mem->pages[i].uptodate = 0;
 		if (is_master) {
 			dsm_mem->pages[i].uptodate = 1;
-			dsm_mem->pages[i].requests_queue = (list_t *) malloc(sizeof(list_t));
+			dsm_mem->pages[i].requests_queue = (list_t *) calloc(1, sizeof(list_t));
 			if (dsm_mem->pages[i].requests_queue == NULL) {
-				error("Could not allocate memory (malloc)\n");
+				error("Could not allocate memory (calloc)\n");
 			}
 
-			dsm_mem->pages[i].current_readers_queue = (list_t *) malloc(sizeof(list_t));
+			dsm_mem->pages[i].current_readers_queue = (list_t *) calloc(1, sizeof(list_t));
 			if (dsm_mem->pages[i].current_readers_queue == NULL) {
-				error("Could not allocate memory (malloc)\n");
+				error("Could not allocate memory (calloc)\n");
 			}
 
 			list_init(dsm_mem->pages[i].requests_queue, sizeof(dsm_page_request_t), request_equals, NULL);

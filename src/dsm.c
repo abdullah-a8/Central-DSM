@@ -37,19 +37,19 @@ static void dsm_m_init(dsm_t *dsm, int port_master, size_t page_count)
 		error("sysconf invalid PAGE_SIZE\n");
 	}
 
-	dsm->mem = (dsm_memory_t *) malloc(sizeof(dsm_memory_t));
+	dsm->mem = (dsm_memory_t *) calloc(1, sizeof(dsm_memory_t));
 	if (dsm->mem == NULL) {
-		error("Could not allocate memory (malloc)\n");
+		error("Could not allocate memory (calloc)\n");
 	}
 
-	dsm->master = (dsm_master_t *) malloc(sizeof(dsm_master_t));
+	dsm->master = (dsm_master_t *) calloc(1, sizeof(dsm_master_t));
 	if (dsm->master == NULL) {
-		error("Could not allocate memory (malloc)\n");
+		error("Could not allocate memory (calloc)\n");
 	}
 
-	dsm->sync_barrier_waiters = (list_t *) malloc(sizeof(list_t));
+	dsm->sync_barrier_waiters = (list_t *) calloc(1, sizeof(list_t));
 	if (dsm->sync_barrier_waiters == NULL) {
-		error("Could not allocate memory (malloc)\n");
+		error("Could not allocate memory (calloc)\n");
 	}
 	list_init(dsm->sync_barrier_waiters, sizeof(int), slave_equals, NULL);
 
@@ -68,11 +68,12 @@ static void dsm_m_init(dsm_t *dsm, int port_master, size_t page_count)
 	pthread_mutex_init(&dsm->mutex_sync_barrier, NULL);
 	pthread_cond_init(&dsm->cond_sync_barrier, NULL);
 
+	/* Initialize socket BEFORE creating listener thread to avoid race condition */
+	dsm->master->sockfd = dsm_socket_connect(dsm->master->host, dsm->master->port);
+
 	if (pthread_create(&dsm->listener_daemon, NULL, &dsm_daemon_msg_listener, (void *) dsm) != 0) {
 		error("pthread_create listener_daemon\n");
 	}
-
-	dsm->master->sockfd = dsm_socket_connect(dsm->master->host, dsm->master->port);
 
 	for(unsigned int i = 0; i < page_count; i++) {
 		dsm->mem->pages[i].write_owner = dsm->master->sockfd;
@@ -102,9 +103,9 @@ static void dsm_n_init(dsm_t *dsm, char *host_master, int port_master)
 		error("sysconf invalid PAGE_SIZE\n");
 	}
 
-	dsm->master = (dsm_master_t *) malloc(sizeof(dsm_master_t));
+	dsm->master = (dsm_master_t *) calloc(1, sizeof(dsm_master_t));
 	if (dsm->master == NULL) {
-		error("Could not allocate memory (malloc)\n");
+		error("Could not allocate memory (calloc)\n");
 	}
 
 	dsm->is_master = 0;
