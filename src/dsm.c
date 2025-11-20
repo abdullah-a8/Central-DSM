@@ -325,15 +325,8 @@ void unlock_write(void *addr)
 	req.rights = page->protection;
 	req.sockfd = dsm_g->master->sockfd;
 
-	/* For slaves: send page to master and mark local copy invalid */
-	if (!dsm_g->is_master) {
-		satisfy_request(page, &req);
-		giveup_localpage(page, dsm_g->master->sockfd);
-	} else {
-		/* For master: mark as invalid to force protocol check, but keep memory accessible */
-		page->uptodate = 0;
-		page->write_owner = dsm_g->master->sockfd;
-	}
+	satisfy_request(page, &req);
+	giveup_localpage(page, dsm_g->master->sockfd);
 
 	if (pthread_mutex_unlock(&page->mutex_page) < 0) {
 		error("unlock mutex_page write");
