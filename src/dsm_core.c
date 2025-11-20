@@ -316,26 +316,38 @@ void lock_page(dsm_page_t *page, int rights)
 	}
 
 	if (!page->uptodate) {
+		/* Master processes its own requests directly to avoid deadlock */
+		if (dsm_g->is_master) {
+			/* Process any pending requests for this page */
+			process_list_requests(page);
 
-		dsm_message_t msg_lockpage;
-		msg_lockpage.type = LOCKPAGE;
+			/* If page is still not uptodate, mark it as uptodate since master has the data */
+			if (!page->uptodate) {
+				page->uptodate = 1;
+				page->protection = rights;
+			}
+		} else {
+			/* Slaves send LOCKPAGE to master and wait for response */
+			dsm_message_t msg_lockpage;
+			msg_lockpage.type = LOCKPAGE;
 
-		msg_lockpage_args_t la = {
-			.page_id = page->page_id,
-			.access_rights = rights
-		};
+			msg_lockpage_args_t la = {
+				.page_id = page->page_id,
+				.access_rights = rights
+			};
 
-		msg_lockpage.lockpage_args = la;
+			msg_lockpage.lockpage_args = la;
 
-		if (dsm_send_msg(dsm_g->master->sockfd, &msg_lockpage) < 0) {
-			error("Send LOCKPAGE\n");
-		}
+			if (dsm_send_msg(dsm_g->master->sockfd, &msg_lockpage) < 0) {
+				error("Send LOCKPAGE\n");
+			}
 
-		debug("Sent LOCKPAGE to master for page %lu\n", page->page_id);
+			debug("Sent LOCKPAGE to master for page %lu\n", page->page_id);
 
-		while (!page->uptodate) {
-			if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
-				error("error pthread_cond_wait mutex_page\n");
+			while (!page->uptodate) {
+				if (pthread_cond_wait(&page->cond_uptodate, &page->mutex_page) < 0) {
+					error("error pthread_cond_wait mutex_page\n");
+				}
 			}
 		}
 	}
