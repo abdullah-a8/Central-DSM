@@ -4,7 +4,7 @@
 
 int main()
 {
-	int entier = 42;
+	int entier = 858;
 	int nb_proc = 3;
 	int *entier_ptr;
 

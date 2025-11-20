@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #include "dsm_socket.h"
 #include "dsm.h"
@@ -197,15 +198,30 @@ static int msg_listener_start(dsm_t *dsm)
 		FD_SET (server_sockfd, &active_fd_set);
 	}
 
-	while (1)
+	while (!dsm->should_terminate)
 	{
 		FD_CLR (dsm->master->sockfd, &active_fd_set);
 		FD_SET (dsm->master->sockfd, &active_fd_set);
 		
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
-		if (select (FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
+		struct timeval timeout;
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 100000; /* 100ms timeout to check termination flag */
+		
+		int select_result = select(FD_SETSIZE, &read_fd_set, NULL, NULL, &timeout);
+		if (select_result < 0) {
+			/* Check if it's a bad file descriptor (socket closed during termination) */
+			if (errno == EBADF || errno == EINTR) {
+				debug("Socket closed or interrupted during select, terminating listener\n");
+				return 0;
+			}
 			error("select\n");
+		}
+		
+		/* Timeout occurred, continue loop to check termination flag */
+		if (select_result == 0) {
+			continue;
 		}
 
 		/* Service all the sockets with input pending. */

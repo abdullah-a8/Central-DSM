@@ -120,12 +120,11 @@ int main()
     printf("base_addr: %lx\n", (long) base_addr);
 
     sync_barrier(nb_proc);
-    lock_read(base_addr);
 
     for(unsigned int i = 0; i < nb_lecture; i++) {
         lock_read(base_addr);
-        printf("entier = %d\n", *((int*) (base_addr)));
-        printf("chaine = %s\n", base_addr + sizeof(int));
+        printf("[Read %d] entier = %d\n", i+1, *((int*) (base_addr)));
+        printf("[Read %d] chaine = %s\n", i+1, (char *)(base_addr + sizeof(int)));
         unlock_read(base_addr);
     }
 
@@ -193,8 +192,8 @@ int main()
 
     for(unsigned int i = 0; i < nb_lecture; i++) {
         lock_read(base_addr);
-        printf("entier = %d\\n", *((int*) (base_addr)));
-        printf("chaine = %s\\n", (char *)(base_addr + sizeof(int)));
+        printf("[Read %d] entier = %d\\n", i+1, *((int*) (base_addr)));
+        printf("[Read %d] chaine = %s\\n", i+1, (char *)(base_addr + sizeof(int)));
         unlock_read(base_addr);
     }
 

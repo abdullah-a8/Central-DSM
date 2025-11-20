@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <signal.h>
+#include <time.h>
+#include <errno.h>
 
 #include "dsm.h"
 #include "dsm_core.h"
@@ -54,6 +56,7 @@ static void dsm_m_init(dsm_t *dsm, int port_master, size_t page_count)
 	list_init(dsm->sync_barrier_waiters, sizeof(int), slave_equals, NULL);
 
 	dsm->is_master = 1;
+	dsm->should_terminate = 0;
 
 	dsm_memory_init(dsm->mem, pagesize, page_count, dsm->is_master);
 
@@ -109,6 +112,7 @@ static void dsm_n_init(dsm_t *dsm, char *host_master, int port_master)
 	}
 
 	dsm->is_master = 0;
+	dsm->should_terminate = 0;
 
 	if (dsm_master_init(dsm->master, host_master, port_master, 0) < 0) {
 		error("dsm_master_init\n");
@@ -169,9 +173,39 @@ static void dsm_n_init(dsm_t *dsm, char *host_master, int port_master)
 
 static void dsm_destroy(dsm_t *dsm)
 {
-	if(pthread_cancel(dsm->listener_daemon) < 0) {
-		error("error terminating daemon thread\n");
+	/* Signal listener thread to terminate gracefully */
+	dsm->should_terminate = 1;
+	
+	/* Wait for listener thread to finish (max 2 seconds) */
+#ifdef _GNU_SOURCE
+	struct timespec timeout;
+	clock_gettime(CLOCK_REALTIME, &timeout);
+	timeout.tv_sec += 2;
+	
+	int join_result = pthread_timedjoin_np(dsm->listener_daemon, NULL, &timeout);
+	if (join_result == ETIMEDOUT) {
+		debug("Listener thread didn't exit in time, cancelling...\n");
+		pthread_cancel(dsm->listener_daemon);
+		pthread_join(dsm->listener_daemon, NULL);
+	} else if (join_result != 0 && join_result != ETIMEDOUT) {
+		debug("pthread_join failed, continuing cleanup\n");
 	}
+#else
+	/* Fallback for non-GNU systems: wait briefly then cancel */
+	struct timespec sleep_time;
+	sleep_time.tv_sec = 0;
+	sleep_time.tv_nsec = 200000000; /* 200ms */
+	nanosleep(&sleep_time, NULL);
+	
+	/* Try non-blocking check if thread exited */
+	int join_result = pthread_tryjoin_np(dsm->listener_daemon, NULL);
+	if (join_result == EBUSY) {
+		/* Thread still running, cancel it */
+		debug("Listener thread didn't exit quickly, cancelling...\n");
+		pthread_cancel(dsm->listener_daemon);
+		pthread_join(dsm->listener_daemon, NULL);
+	}
+#endif
 
 	dsm_master_destroy(dsm->master);
 	dsm_memory_destroy(dsm->mem);

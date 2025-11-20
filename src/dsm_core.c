@@ -245,7 +245,9 @@ int handle_sync_barrier_msg(int from, msg_sync_barrier_args_t *args)
 			if (dsm_send_msg(from, &msg_barrier_ack) < 0) {
 				log("error sending BARRIER_ACK\n");
 			}
+			/* Clear barrier list and reinitialize for next barrier */
 			list_destroy(dsm_g->sync_barrier_waiters);
+			list_init(dsm_g->sync_barrier_waiters, sizeof(int), slave_equals, NULL);
 		}
 		else {
 			list_add(dsm_g->sync_barrier_waiters, &from);
