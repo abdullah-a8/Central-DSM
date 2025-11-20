@@ -320,13 +320,16 @@ void lock_page(dsm_page_t *page, int rights)
 		if (dsm_g->is_master) {
 			/* Check if master is the write owner */
 			if (page->write_owner == dsm_g->master->sockfd) {
-				/* Master owns the page - just mark as uptodate */
-				page->uptodate = 1;
-				if (rights & PROT_WRITE) {
-					page->protection = PROT_READ | PROT_WRITE;
-				} else {
-					page->protection = PROT_READ;
+				/* Master owns the page - restore memory protection and mark as uptodate */
+				void *page_base_addr = dsm_g->mem->base_addr + (page->page_id * dsm_g->mem->pagesize);
+				int prot = (rights & PROT_WRITE) ? (PROT_READ | PROT_WRITE) : PROT_READ;
+
+				if (mprotect(page_base_addr, dsm_g->mem->pagesize, prot) < 0) {
+					error("error mprotect in lock_page\n");
 				}
+
+				page->uptodate = 1;
+				page->protection = prot;
 			} else {
 				/* Someone else has the page - wait for them to return it */
 				debug("Master waiting for page %lu from owner %d\n", page->page_id, page->write_owner);
