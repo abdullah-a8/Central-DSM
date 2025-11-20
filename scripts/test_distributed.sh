@@ -113,17 +113,17 @@ run_slave_reader() {
 
 int main()
 {
-    unsigned int nb_proc = 3;
-    unsigned int nb_lecture = 5;
+    unsigned int num_procs = 3;
+    unsigned int num_reads = 5;
 
     void *base_addr = InitSlave("$master_ip", $port);
     printf("base_addr: %lx\n", (long) base_addr);
 
     printf("=== Phase 1: Initial Barrier ===\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
 
     printf("=== Phase 2: Reading Values ===\n");
-    for(unsigned int i = 0; i < nb_lecture; i++) {
+    for(unsigned int i = 0; i < num_reads; i++) {
         lock_read(base_addr);
         printf("[Read %d] integer = %d\n", i+1, *((int*) (base_addr)));
         printf("[Read %d] string  = %s\n", i+1, (char *)(base_addr + sizeof(int)));
@@ -131,7 +131,7 @@ int main()
     }
 
     printf("=== Phase 3: Final Barrier ===\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
     
     printf("=== Slave-reader completed successfully ===\n");
     QuitDSM();
@@ -182,14 +182,14 @@ run_slave_writer() {
 
 int main()
 {
-    unsigned int nb_proc = 3;
-    unsigned int nb_lecture = 5;
+    unsigned int num_procs = 3;
+    unsigned int num_reads = 5;
     
     void *base_addr = InitSlave("$master_ip", $port);
     printf("base_addr: %lx\\n", (long) base_addr);
 
     printf("=== Phase 1: Initial Barrier ===\\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
 
     printf("=== Phase 2: Writing String ===\\n");
     lock_write(base_addr);
@@ -198,7 +198,7 @@ int main()
     unlock_write(base_addr);
 
     printf("=== Phase 3: Reading Values ===\\n");
-    for(unsigned int i = 0; i < nb_lecture; i++) {
+    for(unsigned int i = 0; i < num_reads; i++) {
         lock_read(base_addr);
         printf("[Read %d] integer = %d\\n", i+1, *((int*) (base_addr)));
         printf("[Read %d] string  = %s\\n", i+1, (char *)(base_addr + sizeof(int)));
@@ -206,7 +206,7 @@ int main()
     }
 
     printf("=== Phase 4: Final Barrier ===\\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
     
     printf("=== Slave-writer completed successfully ===\\n");
     QuitDSM();

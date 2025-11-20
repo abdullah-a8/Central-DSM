@@ -4,26 +4,26 @@
 
 int main()
 {
-	int entier = 858;
-	int nb_proc = 3;
-	int nb_lecture = 5;
-	int *entier_ptr;
+	int integer_val = 858;
+	int num_procs = 3;
+	int num_reads = 5;
+	int *val_ptr;
 
 	void *base_addr = InitMaster(5000, 10);
 	printf("base_addr: %lx\n", (long) base_addr);
-	entier_ptr = (int *) base_addr;
+	val_ptr = (int *) base_addr;
 	
 	printf("=== Phase 1: Writing Integer ===\n");
 	lock_write(base_addr);
-	(*entier_ptr) = entier;
+	(*val_ptr) = integer_val;
 	printf("  Written integer: %d\n", *((int*) (base_addr)));
 	unlock_write(base_addr);
 	
 	printf("=== Phase 2: Initial Barrier ===\n");
-	sync_barrier(nb_proc);
+	sync_barrier(num_procs);
 
 	printf("=== Phase 3: Reading Values ===\n");
-	for(unsigned int i = 0; i < nb_lecture; i++) {
+	for(unsigned int i = 0; i < num_reads; i++) {
 		lock_read(base_addr);
 		printf("[Read %d] integer = %d\n", i+1, *((int*) (base_addr)));
 		printf("[Read %d] string  = %s\n", i+1, (char *)(base_addr + sizeof(int)));
@@ -31,7 +31,7 @@ int main()
 	}
 
 	printf("=== Phase 4: Final Barrier ===\n");
-	sync_barrier(nb_proc);
+	sync_barrier(num_procs);
 	
 	printf("=== Master completed successfully ===\n");
 	QuitDSM();

@@ -9,29 +9,29 @@ cat > /tmp/simple_master.c << 'EOF'
 
 int main()
 {
-    int entier = 42;
-    int nb_proc = 2;  // Only 2 processes
-    int *entier_ptr;
+    int integer_val = 42;
+    int num_procs = 2;  // Only 2 processes
+    int *val_ptr;
 
     void *base_addr = InitMaster(5000, 10);
     printf("Master started. Base address: %lx\n", (long) base_addr);
-    entier_ptr = (int *) base_addr;
+    val_ptr = (int *) base_addr;
     
     printf("Master: Acquiring write lock...\n");
     lock_write(base_addr);
     
-    printf("Master: Waiting at barrier for %d processes...\n", nb_proc);
-    sync_barrier(nb_proc);
+    printf("Master: Waiting at barrier for %d processes...\n", num_procs);
+    sync_barrier(num_procs);
 
-    printf("Master: Writing value %d...\n", entier);
-    (*entier_ptr) = entier;
-    printf("Master: Successfully wrote: %d\n", *entier_ptr);
+    printf("Master: Writing value %d...\n", integer_val);
+    (*val_ptr) = integer_val;
+    printf("Master: Successfully wrote: %d\n", *val_ptr);
 
     unlock_write(base_addr);
     printf("Master: Released write lock\n");
 
     printf("Master: Waiting at final barrier...\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
     
     printf("Master: Cleaning up...\n");
     QuitDSM();
@@ -46,7 +46,7 @@ cat > /tmp/simple_slave.c << 'EOF'
 
 int main(int argc, char *argv[])
 {
-    unsigned int nb_proc = 2;  // Only 2 processes
+    unsigned int num_procs = 2;  // Only 2 processes
     
     if (argc < 2) {
         printf("Usage: %s <master_ip>\n", argv[0]);
@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     void *base_addr = InitSlave(master_ip, 5000);
     printf("Slave connected. Base address: %lx\n", (long) base_addr);
 
-    printf("Slave: Waiting at barrier for %d processes...\n", nb_proc);
-    sync_barrier(nb_proc);
+    printf("Slave: Waiting at barrier for %d processes...\n", num_procs);
+    sync_barrier(num_procs);
     
     printf("Slave: Acquiring read lock...\n");
     lock_read(base_addr);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     printf("Slave: Released read lock\n");
 
     printf("Slave: Waiting at final barrier...\n");
-    sync_barrier(nb_proc);
+    sync_barrier(num_procs);
     
     printf("Slave: Cleaning up...\n");
     QuitDSM();
